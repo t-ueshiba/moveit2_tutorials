@@ -15,7 +15,7 @@ def launch_setup(context):
              package="moveit2_tutorials",
              executable="subframes_tutorial",
              prefix=['gnome-terminal --tab --wait --active --'],
-             output="screen")
+             output="screen"),
     ]
 
 def generate_launch_description() -> LaunchDescription:

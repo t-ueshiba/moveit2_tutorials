@@ -46,21 +46,24 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+inline double radians(double deg) 
+{
+  return M_PI/180.0 * deg;
+}
+
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("subframes_tutorial");
 
 constexpr double EPSILON = 1e-2;
 constexpr double Z_OFFSET = 0.05;
 constexpr double PLANNING_TIME_S = 30.0;
 
-const double TAU = 2 * M_PI;  // One turn (360°) in radians
-
 // BEGIN_SUB_TUTORIAL plan1
 //
 // Creating the planning request
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // In this tutorial, we use a small helper function to create our planning requests and move the robot.
-bool moveToCartPose(const geometry_msgs::msg::PoseStamped& pose, moveit::planning_interface::MoveGroupInterface& group,
-                    const std::string& end_effector_link)
+bool moveToCartesianPose(const geometry_msgs::msg::PoseStamped& pose, moveit::planning_interface::MoveGroupInterface& group,
+                         const std::string& end_effector_link)
 {
   // To use subframes of objects that are attached to the robot in planning, you need to set the end effector of your
   // move_group to the subframe of the object. The format has to be ``object_name/subframe_name``, as shown
@@ -90,14 +93,14 @@ bool moveToCartPose(const geometry_msgs::msg::PoseStamped& pose, moveit::plannin
   return false;
 }
 
-// similar to MoveToCartPose, but tries to plan a cartesian path with a subframe link
+// similar to MoveToCartesianPose, but tries to plan a cartesian path with a subframe link
 bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose, moveit::planning_interface::MoveGroupInterface& group,
                     const std::string& end_effector_link)
 {
   group.clearPoseTargets();
   group.setEndEffectorLink(end_effector_link);
   group.setStartStateToCurrentState();
-  std::vector<double> initial_joint_position({0, -TAU/8, 0, -3*TAU/8, 0, TAU/4, TAU/8});
+  std::vector<double> initial_joint_position({0, -radians(45), 0, -radians(135), 0, radians(90), radians(45)});
   group.setJointValueTarget(initial_joint_position);
   moveit::planning_interface::MoveGroupInterface::Plan myplan;
   if (!group.plan(myplan) || !group.execute(myplan))
@@ -142,6 +145,9 @@ void spawnCollisionObjects(moveit::planning_interface::PlanningSceneInterface& p
   moveit_msgs::msg::CollisionObject box;
   box.id = "box";
   box.header.frame_id = "panda_hand";
+  box.pose.position.z = z_offset_box;
+  box.pose.orientation.w = 1.0;  // Neutral orientation
+  
   box.primitives.resize(1);
   box.primitive_poses.resize(1);
   box.primitives[0].type = box.primitives[0].BOX;
@@ -149,7 +155,6 @@ void spawnCollisionObjects(moveit::planning_interface::PlanningSceneInterface& p
   box.primitives[0].dimensions[0] = 0.05;
   box.primitives[0].dimensions[1] = 0.1;
   box.primitives[0].dimensions[2] = 0.02;
-  box.primitive_poses[0].position.z = z_offset_box;
 
   // Then, we define the subframes of the CollisionObject. The subframes are defined in the ``frame_id`` coordinate
   // system, just like the shapes that make up the object. Each subframe consists of a name and a pose.
@@ -161,65 +166,66 @@ void spawnCollisionObjects(moveit::planning_interface::PlanningSceneInterface& p
   box.subframe_poses.resize(5);
 
   box.subframe_names[0] = "bottom";
-  box.subframe_poses[0].position.y = -.05;
-  box.subframe_poses[0].position.z = 0.0 + z_offset_box;
+  box.subframe_poses[0].position.x =  0.0;
+  box.subframe_poses[0].position.y = -0.05;
+  box.subframe_poses[0].position.z =  0.0;
 
   tf2::Quaternion orientation;
-  orientation.setRPY(90.0 / 180.0 * M_PI, 0, 0);
+  orientation.setRPY(radians(90), 0, 0);
   box.subframe_poses[0].orientation = tf2::toMsg(orientation);
   // END_SUB_TUTORIAL
 
   box.subframe_names[1] = "top";
-  box.subframe_poses[1].position.y = .05;
-  box.subframe_poses[1].position.z = 0.0 + z_offset_box;
-  orientation.setRPY(-90.0 / 180.0 * M_PI, 0, 0);
+  box.subframe_poses[1].position.x = 0.0;
+  box.subframe_poses[1].position.y = 0.05;
+  box.subframe_poses[1].position.z = 0.0;
+  orientation.setRPY(-radians(90), 0, 0);
   box.subframe_poses[1].orientation = tf2::toMsg(orientation);
 
   box.subframe_names[2] = "corner_1";
-  box.subframe_poses[2].position.x = -.025;
-  box.subframe_poses[2].position.y = -.05;
-  box.subframe_poses[2].position.z = -.01 + z_offset_box;
-  orientation.setRPY(90.0 / 180.0 * M_PI, 0, 0);
+  box.subframe_poses[2].position.x = -0.025;
+  box.subframe_poses[2].position.y = -0.05;
+  box.subframe_poses[2].position.z = -0.01;
+  orientation.setRPY(radians(90), 0, 0);
   box.subframe_poses[2].orientation = tf2::toMsg(orientation);
 
   box.subframe_names[3] = "corner_2";
-  box.subframe_poses[3].position.x = .025;
-  box.subframe_poses[3].position.y = -.05;
-  box.subframe_poses[3].position.z = -.01 + z_offset_box;
-  orientation.setRPY(90.0 / 180.0 * M_PI, 0, 0);
+  box.subframe_poses[3].position.x =  0.025;
+  box.subframe_poses[3].position.y = -0.05;
+  box.subframe_poses[3].position.z = -0.01;
+  orientation.setRPY(radians(90), 0, 0);
   box.subframe_poses[3].orientation = tf2::toMsg(orientation);
 
   box.subframe_names[4] = "side";
-  box.subframe_poses[4].position.x = .0;
-  box.subframe_poses[4].position.y = .0;
-  box.subframe_poses[4].position.z = -.01 + z_offset_box;
-  orientation.setRPY(0, 180.0 / 180.0 * M_PI, 0);
+  box.subframe_poses[4].position.x =  0.0;
+  box.subframe_poses[4].position.y =  0.0;
+  box.subframe_poses[4].position.z = -0.01;
+  orientation.setRPY(0, radians(180), 0);
   box.subframe_poses[4].orientation = tf2::toMsg(orientation);
 
   // Next, define the cylinder
   moveit_msgs::msg::CollisionObject cylinder;
   cylinder.id = "cylinder";
   cylinder.header.frame_id = "panda_hand";
+  
   cylinder.primitives.resize(1);
-  cylinder.primitive_poses.resize(1);
   cylinder.primitives[0].type = box.primitives[0].CYLINDER;
   cylinder.primitives[0].dimensions.resize(2);
   cylinder.primitives[0].dimensions[0] = 0.06;   // height (along x)
   cylinder.primitives[0].dimensions[1] = 0.005;  // radius
-  cylinder.primitive_poses[0].position.x = 0.0;
-  cylinder.primitive_poses[0].position.y = 0.0;
-  cylinder.primitive_poses[0].position.z = 0.0 + z_offset_cylinder;
-  orientation.setRPY(0, 90.0 / 180.0 * M_PI, 0);
-  cylinder.primitive_poses[0].orientation = tf2::toMsg(orientation);
+  cylinder.pose.position.x = 0.0;
+  cylinder.pose.position.y = 0.0;
+  cylinder.pose.position.z = 0.0 + z_offset_cylinder;
+  orientation.setRPY(0, radians(90), 0);
+  cylinder.pose.orientation = tf2::toMsg(orientation);
 
-  cylinder.subframe_poses.resize(1);
   cylinder.subframe_names.resize(1);
+  cylinder.subframe_poses.resize(1);
   cylinder.subframe_names[0] = "tip";
-  cylinder.subframe_poses[0].position.x = 0.03;
+  cylinder.subframe_poses[0].position.x = 0.0;
   cylinder.subframe_poses[0].position.y = 0.0;
-  cylinder.subframe_poses[0].position.z = 0.0 + z_offset_cylinder;
-  orientation.setRPY(0, 90.0 / 180.0 * M_PI, 0);
-  cylinder.subframe_poses[0].orientation = tf2::toMsg(orientation);
+  cylinder.subframe_poses[0].position.z = 0.03;
+  cylinder.subframe_poses[0].orientation.w = 1.0;  // Neutral orientation
 
   // BEGIN_SUB_TUTORIAL object2
   // Lastly, the objects are published to the PlanningScene. In this tutorial, we publish a box and a cylinder.
@@ -332,7 +338,7 @@ main(int argc, char** argv)
   fixed_pose.header.frame_id = "panda_link0";
   fixed_pose.pose.position.y = -.4;
   fixed_pose.pose.position.z = .3;
-  target_orientation.setRPY(0, (-20.0 / 180.0 * M_PI), 0);
+  target_orientation.setRPY(0, -radians(20), 0);
   fixed_pose.pose.orientation = tf2::toMsg(target_orientation);
 
   // Set up a small command line interface to make the tutorial interactive.
@@ -345,9 +351,12 @@ main(int argc, char** argv)
              "\n1 to move cylinder tip to box bottom \n2 to move cylinder tip to box top"
              "\n3 to move cylinder tip to box corner 1 \n4 to move cylinder tip to box corner 2"
              "\n5 to move cylinder tip to side of box"
+             "\n"
              "\n6 to return the robot to the start pose"
-             "\n7 to move the robot's wrist to a cartesian pose"
+             "\n"
+             "\n7 to move the robot's wrist to a cartesian pose near the robot base"
              "\n8 to move cylinder/tip to the same cartesian pose"
+             "\n9 to move panda_link8 near box/bottom"
              "\n----------"
              "\n10 to remove box and cylinder from the scene"
              "\n11 to spawn box and cylinder"
@@ -368,7 +377,7 @@ main(int argc, char** argv)
       // The target pose is given relative to a box subframe:
       target_pose.header.frame_id = "box/bottom";
       // The orientation is determined by RPY angles to align the cylinder and box subframes:
-      target_orientation.setRPY(0, 180.0 / 180.0 * M_PI, 90.0 / 180.0 * M_PI);
+      target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
       // To keep some distance to the box, we use a small offset:
       target_pose.pose.position.z = 0.01;
@@ -376,7 +385,7 @@ main(int argc, char** argv)
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
       else
-        moveToCartPose(target_pose, group, "cylinder/tip");
+        moveToCartesianPose(target_pose, group, "cylinder/tip");
       // END_SUB_TUTORIAL
     }
     // BEGIN_SUB_TUTORIAL move_example
@@ -385,52 +394,52 @@ main(int argc, char** argv)
     {
       RCLCPP_INFO_STREAM(LOGGER, "Moving to top of box with cylinder tip");
       target_pose.header.frame_id = "box/top";
-      target_orientation.setRPY(180.0 / 180.0 * M_PI, 0, 90.0 / 180.0 * M_PI);
+      target_orientation.setRPY(radians(180), 0, radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
       target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
       else
-        moveToCartPose(target_pose, group, "cylinder/tip");
+        moveToCartesianPose(target_pose, group, "cylinder/tip");
     }
     // END_SUB_TUTORIAL
     else if (character_input == 3)
     {
       RCLCPP_INFO_STREAM(LOGGER, "Moving to corner1 of box with cylinder tip");
       target_pose.header.frame_id = "box/corner_1";
-      target_orientation.setRPY(0, 180.0 / 180.0 * M_PI, 90.0 / 180.0 * M_PI);
+      target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
       target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
       else
-        moveToCartPose(target_pose, group, "cylinder/tip");
+        moveToCartesianPose(target_pose, group, "cylinder/tip");
     }
     else if (character_input == 4)
     {
       target_pose.header.frame_id = "box/corner_2";
-      target_orientation.setRPY(0, 180.0 / 180.0 * M_PI, 90.0 / 180.0 * M_PI);
+      target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
       target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
       else
-        moveToCartPose(target_pose, group, "cylinder/tip");
+        moveToCartesianPose(target_pose, group, "cylinder/tip");
     }
     else if (character_input == 5)
     {
       target_pose.header.frame_id = "box/side";
-      target_orientation.setRPY(0, 180.0 / 180.0 * M_PI, 90.0 / 180.0 * M_PI);
+      target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
       target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
       else
-        moveToCartPose(target_pose, group, "cylinder/tip");
+        moveToCartesianPose(target_pose, group, "cylinder/tip");
     }
     else if (character_input == 6)
     {
@@ -446,7 +455,7 @@ main(int argc, char** argv)
       if (cartesian_path)
         moveCartesianPath(fixed_pose, group, "panda_hand");
       else
-        moveToCartPose(fixed_pose, group, "panda_hand");
+        moveToCartesianPose(fixed_pose, group, "panda_hand");
     }
     else if (character_input == 8)
     {
@@ -455,7 +464,19 @@ main(int argc, char** argv)
       if (cartesian_path)
         moveCartesianPath(fixed_pose, group, "cylinder/tip");
       else
-        moveToCartPose(fixed_pose, group, "cylinder/tip");
+        moveToCartesianPose(fixed_pose, group, "cylinder/tip");
+    }
+    else if (character_input == 9)
+    {
+      RCLCPP_INFO_STREAM(LOGGER, "Moving to box bottom with panda link 8");
+      target_pose.header.frame_id = "box/bottom";
+      target_orientation.setRPY(0, radians(180), 0);
+      target_pose.pose.orientation = tf2::toMsg(target_orientation);
+      target_pose.pose.position.z = 0.15;
+      if (cartesian_path)
+        moveCartesianPath(target_pose, group, "panda_link8");
+      else
+        moveToCartesianPose(target_pose, group, "panda_link8");
     }
     else if (character_input == 10)
     {
@@ -496,6 +517,10 @@ main(int argc, char** argv)
       att_coll_object.object.operation = att_coll_object.object.ADD;
       RCLCPP_INFO_STREAM(LOGGER, "Attaching cylinder to robot.");
       planning_scene_interface.applyAttachedCollisionObject(att_coll_object);
+    }
+    else if (character_input == 13)
+    {
+      cartesian_path = !cartesian_path;
     }
     else
     {
