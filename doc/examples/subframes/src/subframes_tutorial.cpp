@@ -334,7 +334,7 @@ main(int argc, char** argv)
 
   // Define a pose in the robot base.
   tf2::Quaternion target_orientation;
-  geometry_msgs::msg::PoseStamped fixed_pose, target_pose;
+  geometry_msgs::msg::PoseStamped fixed_pose;
   fixed_pose.header.frame_id = "panda_link0";
   fixed_pose.pose.position.y = -.4;
   fixed_pose.pose.position.z = .3;
@@ -375,12 +375,16 @@ main(int argc, char** argv)
       // Setting the orientation
       // ^^^^^^^^^^^^^^^^^^^^^^^
       // The target pose is given relative to a box subframe:
+      geometry_msgs::msg::PoseStamped target_pose;
       target_pose.header.frame_id = "box/bottom";
-      // The orientation is determined by RPY angles to align the cylinder and box subframes:
+      // To keep some distance to the box, we use a small offset.
+      target_pose.pose.position.x = 0.0;
+      target_pose.pose.position.y = 0.0;
+      target_pose.pose.position.z = 0.01;
+      // The orientation is determined by RPY angles to align the cylinder
+      // and box subframes:
       target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
-      // To keep some distance to the box, we use a small offset:
-      target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
@@ -393,10 +397,14 @@ main(int argc, char** argv)
     else if (character_input == 2)
     {
       RCLCPP_INFO_STREAM(LOGGER, "Moving to top of box with cylinder tip");
+
+      geometry_msgs::msg::PoseStamped target_pose;
       target_pose.header.frame_id = "box/top";
+      target_pose.pose.position.x = 0.0;
+      target_pose.pose.position.y = 0.0;
+      target_pose.pose.position.z = 0.01;
       target_orientation.setRPY(radians(180), 0, radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
-      target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
@@ -406,11 +414,15 @@ main(int argc, char** argv)
     // END_SUB_TUTORIAL
     else if (character_input == 3)
     {
-      RCLCPP_INFO_STREAM(LOGGER, "Moving to corner1 of box with cylinder tip");
+      RCLCPP_INFO_STREAM(LOGGER, "Moving to corner_1 of box with cylinder tip");
+
+      geometry_msgs::msg::PoseStamped target_pose;
       target_pose.header.frame_id = "box/corner_1";
+      target_pose.pose.position.x = 0.0;
+      target_pose.pose.position.y = 0.0;
+      target_pose.pose.position.z = 0.01;
       target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
-      target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
@@ -419,10 +431,15 @@ main(int argc, char** argv)
     }
     else if (character_input == 4)
     {
+      RCLCPP_INFO_STREAM(LOGGER, "Moving to corner_2 of box with cylinder tip");
+
+      geometry_msgs::msg::PoseStamped target_pose;
       target_pose.header.frame_id = "box/corner_2";
+      target_pose.pose.position.x = 0.0;
+      target_pose.pose.position.y = 0.0;
+      target_pose.pose.position.z = 0.01;
       target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
-      target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
@@ -431,10 +448,13 @@ main(int argc, char** argv)
     }
     else if (character_input == 5)
     {
+      geometry_msgs::msg::PoseStamped target_pose;
       target_pose.header.frame_id = "box/side";
+      target_pose.pose.position.x = 0.0;
+      target_pose.pose.position.y = 0.0;
+      target_pose.pose.position.z = 0.01;
       target_orientation.setRPY(0, radians(180), radians(90));
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
-      target_pose.pose.position.z = 0.01;
       showFrames(target_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "cylinder/tip");
@@ -451,6 +471,7 @@ main(int argc, char** argv)
     else if (character_input == 7)
     {
       RCLCPP_INFO_STREAM(LOGGER, "Moving to a pose with robot wrist");
+
       showFrames(fixed_pose, "panda_hand");
       if (cartesian_path)
         moveCartesianPath(fixed_pose, group, "panda_hand");
@@ -460,6 +481,7 @@ main(int argc, char** argv)
     else if (character_input == 8)
     {
       RCLCPP_INFO_STREAM(LOGGER, "Moving to a pose with cylinder tip");
+
       showFrames(fixed_pose, "cylinder/tip");
       if (cartesian_path)
         moveCartesianPath(fixed_pose, group, "cylinder/tip");
@@ -469,10 +491,14 @@ main(int argc, char** argv)
     else if (character_input == 9)
     {
       RCLCPP_INFO_STREAM(LOGGER, "Moving to box bottom with panda link 8");
+
+      geometry_msgs::msg::PoseStamped target_pose;
       target_pose.header.frame_id = "box/bottom";
+      target_pose.pose.position.x = 0.0;
+      target_pose.pose.position.y = 0.0;
+      target_pose.pose.position.z = 0.15;
       target_orientation.setRPY(0, radians(180), 0);
       target_pose.pose.orientation = tf2::toMsg(target_orientation);
-      target_pose.pose.position.z = 0.15;
       if (cartesian_path)
         moveCartesianPath(target_pose, group, "panda_link8");
       else
