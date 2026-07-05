@@ -46,7 +46,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
-inline double radians(double deg) 
+inline double radians(double deg)
 {
   return M_PI/180.0 * deg;
 }
@@ -126,6 +126,52 @@ bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose, moveit::plan
   }
   return false;
 }
+
+void showCurrentPose(moveit::planning_interface::MoveGroupInterface& group, const std::string& end_effector_link)
+{
+  try
+  {
+    const auto pose = group.getCurrentPose(end_effector_link);
+    std::cerr << '[' << pose.pose.position.x
+              << ',' << pose.pose.position.y
+              << ',' << pose.pose.position.z
+              << ';' << pose.pose.orientation.x
+              << ',' << pose.pose.orientation.y
+              << ',' << pose.pose.orientation.z
+              << ',' << pose.pose.orientation.w
+              << ']'
+              << std::endl;
+  }
+  catch (const std::exception& err)
+  {
+      std::cerr << err.what() << std::endl;
+  }
+}
+
+void showAttachedBodies(planning_scene_monitor::LockedPlanningSceneRW& planning_scene, const std::string& end_effector_link)
+{
+  auto& state = planning_scene->getCurrentStateNonConst();
+  const moveit::core::LinkModel* link_model = nullptr;
+  bool found = false;
+  const auto pose = state.getFrameInfo(end_effector_link, link_model, found);
+  const auto pose_msg = tf2::toMsg(pose);
+  std::cerr << '[' << pose_msg.position.x
+            << ',' << pose_msg.position.y
+            << ',' << pose_msg.position.z
+            << ';' << pose_msg.orientation.x
+            << ',' << pose_msg.orientation.y
+            << ',' << pose_msg.orientation.z
+            << ',' << pose_msg.orientation.w
+            << ']'
+            << std::endl;
+
+  std::map<std::string, const moveit::core::AttachedBody*> attached_bodies;
+  state.getAttachedBodies(attached_bodies);
+  std::cerr << "attached_bodies:";
+  for (const auto& entry : attached_bodies)
+    std::cerr << ' ' << entry.first;
+  std::cerr << std::endl;
+}
 // END_SUB_TUTORIAL
 
 // BEGIN_SUB_TUTORIAL object1
@@ -147,7 +193,7 @@ void spawnCollisionObjects(moveit::planning_interface::PlanningSceneInterface& p
   box.header.frame_id = "panda_hand";
   box.pose.position.z = z_offset_box;
   box.pose.orientation.w = 1.0;  // Neutral orientation
-  
+
   box.primitives.resize(1);
   box.primitive_poses.resize(1);
   box.primitives[0].type = box.primitives[0].BOX;
@@ -207,7 +253,7 @@ void spawnCollisionObjects(moveit::planning_interface::PlanningSceneInterface& p
   moveit_msgs::msg::CollisionObject cylinder;
   cylinder.id = "cylinder";
   cylinder.header.frame_id = "panda_hand";
-  
+
   cylinder.primitives.resize(1);
   cylinder.primitives[0].type = box.primitives[0].CYLINDER;
   cylinder.primitives[0].dimensions.resize(2);
@@ -308,7 +354,7 @@ main(int argc, char** argv)
   // Fetch the current planning scene state once
   auto planning_scene_monitor = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(node, "robot_description");
   planning_scene_monitor->requestPlanningSceneState();
-  planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor);
+  planning_scene_monitor::LockedPlanningSceneRW planning_scene(planning_scene_monitor);
 
   // Visualize frames as rviz markers
   auto marker_publisher =
@@ -361,7 +407,9 @@ main(int argc, char** argv)
              "\n10 to remove box and cylinder from the scene"
              "\n11 to spawn box and cylinder"
              "\n12 to attach the cylinder to the gripper"
-             "\n13 to toggle between cartesian_pose/cartesian_path\n");
+             "\n13 to toggle between cartesian_pose/cartesian_path"
+             "\n14 to show current end-effector pose"
+             "\n15 to show attached bodies\n");
     std::cin >> character_input;
     if (character_input == 0)
     {
@@ -547,6 +595,14 @@ main(int argc, char** argv)
     else if (character_input == 13)
     {
       cartesian_path = !cartesian_path;
+    }
+    else if (character_input == 14)
+    {
+      showCurrentPose(group, "panda_hand");
+    }
+    else if (character_input == 15)
+    {
+      showAttachedBodies(planning_scene, "panda_hand");
     }
     else
     {

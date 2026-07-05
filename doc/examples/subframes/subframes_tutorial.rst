@@ -28,7 +28,7 @@ Running The Demo
 ----------------
 After having completed the steps in :doc:`Getting Started </doc/tutorials/getting_started/getting_started>`, open two terminals. In the first terminal, execute this command to load up a panda, and wait for everything to finish loading: ::
 
-    ros2 launch moveit2_tutorials demo.launch.py
+    ros2 launch moveit_resources_panda_moveit_config demo.launch.py
 
 In the second terminal run the tutorial: ::
 
