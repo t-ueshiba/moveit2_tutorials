@@ -127,35 +127,26 @@ bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose, moveit::plan
   return false;
 }
 
-void showCurrentPose(moveit::planning_interface::MoveGroupInterface& group, const std::string& end_effector_link)
+void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_scene, moveit::planning_interface::MoveGroupInterface& group, const std::string& end_effector_link)
 {
-  try
-  {
-    const auto pose = group.getCurrentPose(end_effector_link);
-    std::cerr << '[' << pose.pose.position.x
-              << ',' << pose.pose.position.y
-              << ',' << pose.pose.position.z
-              << ';' << pose.pose.orientation.x
-              << ',' << pose.pose.orientation.y
-              << ',' << pose.pose.orientation.z
-              << ',' << pose.pose.orientation.w
-              << ']'
-              << std::endl;
-  }
-  catch (const std::exception& err)
-  {
-      std::cerr << err.what() << std::endl;
-  }
-}
+  const auto& joint_values = group.getCurrentJointValues();
+  auto joint_value = joint_values.cbegin();
+  std::map<std::string, double> joint_map;
+  for (const auto& joint_name : group.getJointNames())
+    joint_map[joint_name] = *joint_value++;
 
-void showAttachedBodies(planning_scene_monitor::LockedPlanningSceneRW& planning_scene, const std::string& end_effector_link)
-{
   auto& state = planning_scene->getCurrentStateNonConst();
+  const auto& variable_names = state.getVariableNames();
+  for (const auto& variable_name : variable_names)
+    if (auto it = joint_map.find(variable_name); it != joint_map.end())
+      state.setVariablePosition(variable_name, it->second);
+  state.update();
+
   const moveit::core::LinkModel* link_model = nullptr;
   bool found = false;
   const auto pose = state.getFrameInfo(end_effector_link, link_model, found);
   const auto pose_msg = tf2::toMsg(pose);
-  std::cerr << '[' << pose_msg.position.x
+  std::cerr << "### [" << pose_msg.position.x
             << ',' << pose_msg.position.y
             << ',' << pose_msg.position.z
             << ';' << pose_msg.orientation.x
@@ -164,13 +155,6 @@ void showAttachedBodies(planning_scene_monitor::LockedPlanningSceneRW& planning_
             << ',' << pose_msg.orientation.w
             << ']'
             << std::endl;
-
-  std::map<std::string, const moveit::core::AttachedBody*> attached_bodies;
-  state.getAttachedBodies(attached_bodies);
-  std::cerr << "attached_bodies:";
-  for (const auto& entry : attached_bodies)
-    std::cerr << ' ' << entry.first;
-  std::cerr << std::endl;
 }
 // END_SUB_TUTORIAL
 
@@ -408,8 +392,7 @@ main(int argc, char** argv)
              "\n11 to spawn box and cylinder"
              "\n12 to attach the cylinder to the gripper"
              "\n13 to toggle between cartesian_pose/cartesian_path"
-             "\n14 to show current end-effector pose"
-             "\n15 to show attached bodies\n");
+             "\n14 to show current end-effector pose\n");
     std::cin >> character_input;
     if (character_input == 0)
     {
@@ -598,11 +581,7 @@ main(int argc, char** argv)
     }
     else if (character_input == 14)
     {
-      showCurrentPose(group, "panda_hand");
-    }
-    else if (character_input == 15)
-    {
-      showAttachedBodies(planning_scene, "panda_hand");
+      showCurrentPose(planning_scene, group, "cylinder/tip");
     }
     else
     {
