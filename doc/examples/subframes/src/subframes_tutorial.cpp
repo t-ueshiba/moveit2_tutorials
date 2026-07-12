@@ -133,6 +133,7 @@ void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_sce
                      const moveit::planning_interface::MoveGroupInterface& group,
                      const std::string& end_effector_link)
 {
+#if 1
   const auto& joint_values = group.getCurrentJointValues();
   auto joint_value = joint_values.cbegin();
   std::map<std::string, double> joint_map;
@@ -140,8 +141,7 @@ void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_sce
     joint_map[joint_name] = *joint_value++;
 
   auto& state = planning_scene->getCurrentStateNonConst();
-  const auto& variable_names = state.getVariableNames();
-  for (const auto& variable_name : variable_names)
+  for (const auto& variable_name : state.getVariableNames())
     if (const auto it = joint_map.find(variable_name); it != joint_map.end())
       state.setVariablePosition(variable_name, it->second);
   state.update();
@@ -150,6 +150,10 @@ void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_sce
   bool found = false;
   const auto pose = state.getFrameInfo(end_effector_link, link_model, found);
   const auto pose_msg = tf2::toMsg(pose);
+#else
+  const auto pose_msg = tf2::toMsg(planning_scene->getFrameTransform(
+                                       end_effector_link));
+#endif
   std::cerr << "### [" << pose_msg.position.x
             << ',' << pose_msg.position.y
             << ',' << pose_msg.position.z
@@ -382,10 +386,10 @@ main(int argc, char** argv)
   {
     RCLCPP_INFO(LOGGER, "==========================\n"
              "Press a key and hit Enter to execute an action. \n0 to exit"
+             "\n"
              "\n1 to move cylinder tip to box bottom \n2 to move cylinder tip to box top"
              "\n3 to move cylinder tip to box corner 1 \n4 to move cylinder tip to box corner 2"
              "\n5 to move cylinder tip to side of box"
-             "\n"
              "\n6 to return the robot to the start pose"
              "\n"
              "\n7 to move the robot's wrist to a cartesian pose near the robot base"
