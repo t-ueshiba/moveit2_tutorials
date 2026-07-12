@@ -38,9 +38,9 @@
 #include <rclcpp/rclcpp.hpp>
 
 // MoveIt
-#include <moveit/planning_scene_interface/planning_scene_interface.h>
-#include <moveit/planning_scene_monitor/planning_scene_monitor.h>
-#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit/planning_scene_interface/planning_scene_interface.hpp>
+#include <moveit/planning_scene_monitor/planning_scene_monitor.hpp>
+#include <moveit/move_group_interface/move_group_interface.hpp>
 
 // TF2
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -62,7 +62,8 @@ constexpr double PLANNING_TIME_S = 30.0;
 // Creating the planning request
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // In this tutorial, we use a small helper function to create our planning requests and move the robot.
-bool moveToCartesianPose(const geometry_msgs::msg::PoseStamped& pose, moveit::planning_interface::MoveGroupInterface& group,
+bool moveToCartesianPose(const geometry_msgs::msg::PoseStamped& pose,
+                         moveit::planning_interface::MoveGroupInterface& group,
                          const std::string& end_effector_link)
 {
   // To use subframes of objects that are attached to the robot in planning, you need to set the end effector of your
@@ -94,31 +95,32 @@ bool moveToCartesianPose(const geometry_msgs::msg::PoseStamped& pose, moveit::pl
 }
 
 // similar to MoveToCartesianPose, but tries to plan a cartesian path with a subframe link
-bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose, moveit::planning_interface::MoveGroupInterface& group,
-                    const std::string& end_effector_link)
+bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose,
+                       moveit::planning_interface::MoveGroupInterface& group,
+                       const std::string& end_effector_link)
 {
   group.clearPoseTargets();
   group.setEndEffectorLink(end_effector_link);
   group.setStartStateToCurrentState();
-  std::vector<double> initial_joint_position({0, -radians(45), 0, -radians(135), 0, radians(90), radians(45)});
-  group.setJointValueTarget(initial_joint_position);
-  moveit::planning_interface::MoveGroupInterface::Plan myplan;
-  if (!group.plan(myplan) || !group.execute(myplan))
-  {
-    RCLCPP_WARN(LOGGER, "Failed to move to initial joint positions");
-    return false;
-  }
+  // std::vector<double> initial_joint_position({0, -radians(45), 0, -radians(135), 0, radians(90), radians(45)});
+  // group.setJointValueTarget(initial_joint_position);
+  // moveit::planning_interface::MoveGroupInterface::Plan myplan;
+  // if (!group.plan(myplan) || !group.execute(myplan))
+  // {
+  //   RCLCPP_WARN(LOGGER, "Failed to move to initial joint positions");
+  //   return false;
+  // }
 
   std::vector<geometry_msgs::msg::Pose> waypoints;
   waypoints.push_back(pose.pose);
   moveit_msgs::msg::RobotTrajectory trajectory;
-  double percent = group.computeCartesianPath(waypoints, 0.01, 0, trajectory, true);
+  double percent = group.computeCartesianPath(waypoints, 0.01, trajectory, true);
   if (percent == 1.0){
     group.execute(trajectory);
     return true;
   }
 
-  if (percent == -1.0){
+  if (percent < 0.0){
     RCLCPP_WARN(LOGGER, "Failed to compute cartesian path");
   }
   else {
@@ -127,7 +129,9 @@ bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose, moveit::plan
   return false;
 }
 
-void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_scene, moveit::planning_interface::MoveGroupInterface& group, const std::string& end_effector_link)
+void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_scene,
+                     const moveit::planning_interface::MoveGroupInterface& group,
+                     const std::string& end_effector_link)
 {
   const auto& joint_values = group.getCurrentJointValues();
   auto joint_value = joint_values.cbegin();
@@ -138,7 +142,7 @@ void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_sce
   auto& state = planning_scene->getCurrentStateNonConst();
   const auto& variable_names = state.getVariableNames();
   for (const auto& variable_name : variable_names)
-    if (auto it = joint_map.find(variable_name); it != joint_map.end())
+    if (const auto it = joint_map.find(variable_name); it != joint_map.end())
       state.setVariablePosition(variable_name, it->second);
   state.update();
 
