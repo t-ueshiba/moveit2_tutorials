@@ -129,7 +129,7 @@ bool moveCartesianPath(const geometry_msgs::msg::PoseStamped& pose,
   return false;
 }
 
-void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_scene,
+void showCurrentPose(const planning_scene_monitor::LockedPlanningSceneRO& planning_scene,
                      const moveit::planning_interface::MoveGroupInterface& group,
                      const std::string& end_effector_link)
 {
@@ -338,7 +338,7 @@ main(int argc, char** argv)
   // Fetch the current planning scene state once
   auto planning_scene_monitor = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>(node, "robot_description");
   planning_scene_monitor->requestPlanningSceneState();
-  planning_scene_monitor::LockedPlanningSceneRW planning_scene(planning_scene_monitor);
+  planning_scene_monitor::LockedPlanningSceneRO planning_scene(planning_scene_monitor);
 
   // Visualize frames as rviz markers
   auto marker_publisher =
