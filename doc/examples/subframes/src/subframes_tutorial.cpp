@@ -133,27 +133,19 @@ void showCurrentPose(planning_scene_monitor::LockedPlanningSceneRW& planning_sce
                      const moveit::planning_interface::MoveGroupInterface& group,
                      const std::string& end_effector_link)
 {
-#if 1
-  const auto& joint_values = group.getCurrentJointValues();
-  auto joint_value = joint_values.cbegin();
-  std::map<std::string, double> joint_map;
-  for (const auto& joint_name : group.getJointNames())
-    joint_map[joint_name] = *joint_value++;
-
-  auto& state = planning_scene->getCurrentStateNonConst();
-  for (const auto& variable_name : state.getVariableNames())
-    if (const auto it = joint_map.find(variable_name); it != joint_map.end())
-      state.setVariablePosition(variable_name, it->second);
-  state.update();
-
-  const moveit::core::LinkModel* link_model = nullptr;
-  bool found = false;
-  const auto pose = state.getFrameInfo(end_effector_link, link_model, found);
-  const auto pose_msg = tf2::toMsg(pose);
-#else
-  const auto pose_msg = tf2::toMsg(planning_scene->getFrameTransform(
-                                       end_effector_link));
-#endif
+  const auto& state = planning_scene->getCurrentState();
+  const auto* parent = state.getRigidlyConnectedParentLinkModel(end_effector_link);
+  if (!parent)
+  {
+    std::cerr << "Parent not found for link[" << end_effector_link << ']'
+              << std::endl;
+    return;
+  }
+  const auto& parent_link = parent->getName();
+  const auto  pose_msg
+      = tf2::toMsg(group.getCurrentState()->getFrameTransform(parent_link) *
+                   state.getFrameTransform(parent_link).inverse() *
+                   state.getFrameTransform(end_effector_link));
   std::cerr << "### [" << pose_msg.position.x
             << ',' << pose_msg.position.y
             << ',' << pose_msg.position.z
